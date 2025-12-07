@@ -1,4 +1,5 @@
 # Stock Prediction Dashboard
+LINK - https://stock-market-prediction-html-1.onrender.com
 
 A professional Machine Learning Dashboard for Stock Prediction, featuring advanced visualizations, probability curves, and multiple model comparisons (Logistic Regression, XGBoost, Random Forest, etc.).
 
