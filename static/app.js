@@ -65,8 +65,15 @@ form.addEventListener('submit', async (e) => {
         });
 
         if (!response.ok) {
-            const err = await response.json();
-            throw new Error(err.detail || 'Analysis failed');
+            const contentType = response.headers.get("content-type");
+            if (contentType && contentType.indexOf("application/json") !== -1) {
+                const err = await response.json();
+                throw new Error(err.detail || 'Analysis failed');
+            } else {
+                const text = await response.text();
+                console.error("Server Error (HTML):", text);
+                throw new Error(`Server Error (${response.status}): The server returned an HTML page instead of JSON. Check Render logs. Content: ${text.substring(0, 100)}...`);
+            }
         }
 
         analysisData = await response.json();
