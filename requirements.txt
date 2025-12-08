@@ -6,5 +6,5 @@ yfinance
 scikit-learn
 xgboost
 # tensorflow; exclude to keep slug size small for free tier, uncomment if needed
-# tensorflow-cpu
+tensorflow-cpu
 python-multipart

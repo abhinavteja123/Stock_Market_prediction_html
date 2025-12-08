@@ -1,44 +1,69 @@
-# Stock Prediction Dashboard
-LINK - https://stock-market-prediction-html-1.onrender.com
+# 📈 Market Insight - AI Stock Prediction Dashboard
 
-A professional Machine Learning Dashboard for Stock Prediction, featuring advanced visualizations, probability curves, and multiple model comparisons (Logistic Regression, XGBoost, Random Forest, etc.).
+**Market Insight** is an institutional-grade stock analysis and prediction platform. It leverages an ensemble of machine learning models to decode market volatility and generate high-confidence trading signals.
 
-## Features
-- **Interactive Charts**: Probability curves with confidence zones, Confusion Matrices, and Price Trends.
-- **Multiple Models**: Compare Classical ML models and LSTM.
-- **Advanced UI**: Glassmorphism design, smooth animations, and responsive layout.
-- **Detailed Metrics**: F1-Score, Accuracy, Precision, Recall, and Feature Importance.
+## 🚀 Features
 
-## How to Run Locally
+*   **Multi-Model Ensemble**: Synthesizes predictions from **LSTM** (Deep Learning), **XGBoost** (Gradient Boosting), and **Logistic Regression**.
+*   **Interactive Dashboard**: A premium, "bento-box" style UI built with React & Framer Motion.
+*   **Forecast Timeline**: Visualizes "Actual vs Predicted" outcomes with clear **Green (UP)** and **Red (DOWN)** prediction zones.
+*   **Deep Analysis**:
+    *   **Market Structure**: Interactive candlestick/line charts.
+    *   **Correlation Matrix**: Heatmaps showing relationships between technical indicators.
+    *   **Feature Importance**: Identifies which factors (RSI, MACD, Volume) are driving the market.
+*   **Real-Time Configuration**: Adjust Training Epochs, Validation Splits, and Lookback Windows on the fly.
 
-1.  **Install Dependencies**:
-    ```bash
-    pip install -r requirements.txt
-    ```
+## 🛠️ Tech Stack
 
-2.  **Run the Server**:
-    ```bash
-    python server.py
-    ```
+### Frontend
+*   **React** (Vite)
+*   **Framer Motion** (Animations)
+*   **Plotly.js** (Financial Charts)
+*   **Lucide React** (Icons)
+*   **CSS Modules** (Premium Dark Theme)
 
-3.  **Open in Browser**:
-    Go to `http://localhost:8000`
+### Backend
+*   **Python 3.8+**
+*   **FastAPI** (High-performance API)
+*   **Pandas & NumPy** (Data Processing)
+*   **Scikit-Learn** (Classical ML)
+*   **TensorFlow/Keras** (LSTM Networks)
+*   **YFinance** (Real-time Data)
 
-## How to Deploy for Free
+## 📦 Installation & Setup
 
-### Option 1: Render (Recommended)
-1.  Push this code to a GitHub repository.
-2.  Sign up at [render.com](https://render.com).
-3.  Click **New +** -> **Web Service**.
-4.  Connect your GitHub repo.
-5.  Use these settings:
-    -   **Runtime**: Python 3
-    -   **Build Command**: `pip install -r requirements.txt`
-    -   **Start Command**: `python server.py` (or `uvicorn server:app --host 0.0.0.0 --port $PORT`)
-6.  Click **Create Web Service**. It will be live in minutes!
+### 1. Backend Setup
 
-### Option 2: Hugging Face Spaces
-1.  Create a new Space at [huggingface.co/spaces](https://huggingface.co/spaces).
-2.  Select **Docker** as the SDK (or standard Python if supported for FastAPI).
-3.  Upload these files.
-4.  It will build and serve automatically.
+```bash
+# 1. Install Python dependencies
+pip install -r requirements.txt
+
+# 2. Run the API Server
+python server.py
+```
+*The server will start at `http://localhost:8000`*
+
+### 2. Frontend Setup
+
+```bash
+# 1. Navigate to frontend directory
+cd frontend
+
+# 2. Install Node dependencies
+npm install
+
+# 3. Start the Development Server
+npm run dev
+```
+*The app will be available at `http://localhost:5173` (or similar)*
+
+## 🔮 Usage
+
+1.  Open the **Frontend** in your browser.
+2.  Enter a **Stock Ticker** (e.g., `AAPL`, `INFY.NS`, `BTC-USD`).
+3.  Select a **Date Range** and **Validation Split**.
+4.  Click **INITIALIZE SYSTEM**.
+5.  View the generated **Trading Signals**, **Backtest Metrics**, and **Feature Analysis**.
+
+---
+*Built for the Future of Quant Trading.*
