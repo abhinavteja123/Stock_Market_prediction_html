@@ -12,7 +12,7 @@ from xgboost import XGBClassifier
 from sklearn.ensemble import RandomForestClassifier, VotingClassifier
 from sklearn import metrics
 import yfinance as yf
-from datetime import datetime, timedelta
+from datetime import datetime
 
 # TensorFlow/Keras dynamic import
 tf_spec = importlib.util.find_spec("tensorflow")
@@ -178,12 +178,6 @@ def create_lstm_sequences(data_array, labels_array, window):
 
 def download_stock_data(symbol, start_date, end_date):
     """Download stock data from Yahoo Finance."""
-    # Ensure end_date includes the last day by adding a buffer if needed
-    # yfinance end_date is exclusive.
-    if isinstance(end_date, str):
-        end_dt = datetime.strptime(end_date, "%Y-%m-%d")
-        end_date = (end_dt + timedelta(days=1)).strftime("%Y-%m-%d")
-
     df = yf.download(symbol, start=start_date, end=end_date)
     
     # Handle MultiIndex columns from yfinance
@@ -201,7 +195,7 @@ def download_stock_data(symbol, start_date, end_date):
     return df
 
 
-def engineer_features(df, drop_undefined_target=True):
+def engineer_features(df):
     """Add technical indicators and features to the dataframe."""
     df_processed = df.copy()
 
@@ -241,12 +235,8 @@ def engineer_features(df, drop_undefined_target=True):
     df_processed = df_processed.dropna(subset=feature_fill_cols)
 
     # Create target: 1 if next day's close is higher, 0 otherwise
-    # Target for the last row is NaN (unknown), effectively.
     df_processed['target'] = np.where(df_processed['Close'].shift(-1) > df_processed['Close'], 1, 0)
-    
-    if drop_undefined_target:
-        # Drop the last row where target is invalid/unknown for TRAINING
-        df_processed = df_processed.iloc[:-1]
+    df_processed = df_processed.iloc[:-1]
 
     return df_processed
 

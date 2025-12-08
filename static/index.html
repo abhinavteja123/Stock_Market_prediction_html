@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StockProphet | Advanced Market Analysis</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+    <!-- Chart.js and Plotly -->
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <!-- Custom Style -->
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar Controls -->
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="logo-icon">SP</div>
+                <h1>StockProphet</h1>
+            </div>
+
+            <form id="analysisForm" class="control-panel">
+                <div class="form-group">
+                    <label>Stock Symbol</label>
+                    <input type="text" id="symbol" placeholder="e.g. INFY.NS" value="INFY.NS" required>
+                </div>
+
+                <div class="section-title">Date Range</div>
+                <div class="form-group">
+                    <label>Start Date</label>
+                    <input type="date" id="startDate" value="2000-01-01">
+                </div>
+                <div class="form-group">
+                    <label>End Date</label>
+                    <input type="date" id="endDate">
+                </div>
+
+                <div class="section-title">Validation</div>
+                <div class="form-group">
+                    <label>Split Ratio (%) <span id="valSplitValue" class="value-badge">20</span></label>
+                    <input type="range" id="validationSplit" min="10" max="30" value="20">
+                </div>
+
+                <div class="section-title">LSTM Hyperparameters</div>
+                <div class="form-group">
+                    <label>Epochs</label>
+                    <input type="number" id="lstmEpochs" value="50" min="10" max="200">
+                </div>
+                <div class="form-group">
+                    <label>Batch Size</label>
+                    <input type="number" id="lstmBatchSize" value="32" min="1">
+                </div>
+                <div class="form-group">
+                    <label>Window Size</label>
+                    <input type="number" id="lstmWindow" value="60" min="10" max="100">
+                </div>
+
+                <button type="submit" class="btn-primary" id="analyzeBtn">
+                    <span class="btn-text">Initialize Analysis</span>
+                    <div class="btn-glow"></div>
+                </button>
+            </form>
+
+            <div class="status-box">
+                <div class="status-indicator" id="systemStatus">● System Ready</div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Empty State -->
+            <div id="welcomeState" class="state-view active">
+                <div class="welcome-content">
+                    <h2>Advanced Market Intelligence</h2>
+                    <p>Configure the model parameters in the sidebar to begin training and analysis.</p>
+                </div>
+            </div>
+
+            <!-- Loading State -->
+            <div id="loadingState" class="state-view">
+                <div class="loader-container">
+                    <div class="dna-loader"></div>
+                    <h3 id="loadingText">Connecting to Market Data...</h3>
+                    <div class="progress-bar">
+                        <div class="progress-fill"></div>
+                    </div>
+                    <div class="log-console" id="buildLogs">
+                        > Initializing environment...<br>
+                        > Waiting for input...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dashboard State -->
+            <div id="resultsState" class="state-view">
+                <header class="results-header">
+                    <div class="header-info">
+                        <h2 id="resSymbol">INFY.NS</h2>
+                        <span class="badge">Analysis Complete</span>
+                    </div>
+                </header>
+
+                <div class="dashboard-grid">
+                    <!-- 0. Main Price Trend (Top Priority) -->
+                    <div class="card full-width">
+                        <h3>Close Price Trend (Historical Data)</h3>
+                        <div id="priceChart" class="chart-container tall-chart" style="height: 600px;"></div>
+                    </div>
+
+                    <!-- 1. EDA: Feature Distributions -->
+                    <div class="card full-width">
+                        <h3>Feature Analysis</h3>
+
+                        <h4 style="margin-top:0; color:var(--text-secondary)">Feature Distributions</h4>
+                        <div id="featureHistograms" class="hist-grid"></div>
+
+                        <h4 style="margin-top:2rem; color:var(--text-secondary)">Feature Correlation Heatmap</h4>
+                        <div id="corrHeatmap" class="heatmap-container"></div>
+                    </div>
+
+                    <!-- 2. Metrics Table -->
+                    <div class="card full-width">
+                        <h3>Model Performance Summary</h3>
+                        <div class="table-container">
+                            <table id="metricsTable">
+                                <thead>
+                                    <tr>
+                                        <th>Model</th>
+                                        <th>F1 Score</th>
+                                        <th>Accuracy</th>
+                                        <th>AUC</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- 3. Detailed Results Split -->
+                    <div class="card full-width">
+                        <h3>Best Model Deep Dive</h3>
+                        <div class="details-split">
+                            <div class="split-col">
+                                <h4>Classification Report</h4>
+                                <div id="clfReport" class="report-box"></div>
+                            </div>
+                            <div class="split-col">
+                                <h4>Top Influencing Features</h4>
+                                <div id="featImpTableContainer" class="table-container" style="max-height: 300px;">
+                                    <table id="featImpTable">
+                                        <thead>
+                                            <tr>
+                                                <th>Feature</th>
+                                                <th>Importance</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 4. Advanced Diagnostics (Confusion Matrix & Pred vs Actual) -->
+                    <div class="card full-width">
+                        <h3>Advanced Diagnostics</h3>
+
+                        <h4 style="color:var(--text-secondary)">Prediction vs Actual (Validation Set)</h4>
+                        <div id="predVsActualContainer" class="pred-actual-grid"></div>
+
+                        <h4 style="margin-top:2rem; color:var(--text-secondary)">Confusion Matrices</h4>
+                        <div id="confMatricesContainer" class="hist-grid"></div>
+                    </div>
+
+                    <!-- Prediction Footer -->
+                    <div class="prediction-section">
+                        <button id="predictBtn" class="btn-glitch">
+                            GENERATE PREDICTION
+                        </button>
+
+                        <div id="predictionCard" class="prediction-card hidden">
+                            <div class="pred-header">Next Trading Day Forecast</div>
+                            <div class="pred-sub"
+                                style="color:var(--text-secondary); font-size:0.9rem; margin-bottom:1rem;">
+                                Model: <span id="predModel" style="color:var(--accent); font-weight:bold">--</span>
+                            </div>
+
+                            <!-- Additional Metrics -->
+                            <div class="pred-metrics-row"
+                                style="display:flex; justify-content:center; gap:1.5rem; margin-bottom:1.5rem; font-size:0.85rem; color:var(--text-secondary);">
+                                <div>F1: <span id="predF1" style="color:white; font-weight:600">--</span></div>
+                                <div>Acc: <span id="predAcc" style="color:white; font-weight:600">--</span></div>
+                            </div>
+
+                            <div class="pred-main">
+                                <div class="direction-icon" id="predIcon">?</div>
+                                <div class="pred-details">
+                                    <div class="pred-label">Signal</div>
+                                    <div class="pred-value" id="predSignal">--</div>
+                                </div>
+                            </div>
+
+                            <div class="confidence-wrapper" style="width:100%; text-align:left; margin-top:1rem;">
+                                <div class="label-row"
+                                    style="display:flex; justify-content:space-between; margin-bottom:0.5rem; color:var(--text-secondary);">
+                                    <span>Confidence</span>
+                                    <span id="predConf">0%</span>
+                                </div>
+                                <div class="progress-bar"
+                                    style="height:8px; background:rgba(255,255,255,0.1); border-radius:4px; overflow:hidden;">
+                                    <div class="bar-fill" id="predConfBar"
+                                        style="width:0%; height:100%; background:var(--success); transition:width 1s;">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="prob-row"
+                                style="margin-top:1rem; font-size:0.9rem; color:var(--text-secondary);">
+                                <span>Up Probability:</span> <span id="predProb"
+                                    style="color:white; font-weight:bold;">0.00%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="/static/app.js"></script>
+
+    <!-- Shortcut Box -->
+    <div id="predictionShortcut" class="shortcut-box hidden" onclick="scrollToPrediction()">
+        <div class="shortcut-content">
+            <span class="shortcut-icon">⚡</span>
+            <span class="shortcut-text">See Prediction</span>
+        </div>
+    </div>
+</body>
+
+</html>

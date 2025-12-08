@@ -1,11 +1,12 @@
 from fastapi import FastAPI, HTTPException, Request
-
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import pandas as pd
 import numpy as np
 import json
-from datetime import datetime, timedelta
+from datetime import datetime
 import graph  # Importing the provided logic
 
 app = FastAPI()
@@ -19,7 +20,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
+# Mount static files
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 class AnalysisRequest(BaseModel):
     symbol: str
@@ -30,9 +32,10 @@ class AnalysisRequest(BaseModel):
     start_date: str = ""
     end_date: str = ""
 
-@app.get("/")
-def read_root():
-    return {"message": "Market Insight API is running. Please use the frontend to interact."}
+# Serve index.html
+@app.get("/", response_class=FileResponse)
+async def read_root():
+    return FileResponse("static/index.html")
 
 @app.post("/analyze")
 async def analyze_stock(request: AnalysisRequest):
@@ -40,16 +43,13 @@ async def analyze_stock(request: AnalysisRequest):
         # 1. Configuration
         symbol = request.symbol.upper()
         # Dates: Use provided or defaults
-        # Default start: 2000-01-01, Default end: Tomorrow (to include today's data fully)
-        start_date = request.start_date if request.start_date else "2015-01-01"
-        end_date = request.end_date if request.end_date else (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
+        # Default start: 2000-01-01, Default end: Today
+        start_date = request.start_date if request.start_date else "2000-01-01"
+        end_date = request.end_date if request.end_date else datetime.now().strftime("%Y-%m-%d")
         
-        print(f"DEBUG: Analyzing {symbol} from {start_date} to {end_date}")
-
         # 2. Download Data
         try:
             df = graph.download_stock_data(symbol, start_date, end_date)
-            print(f"DEBUG: Downloaded {len(df)} rows. Last Date: {df['Date'].iloc[-1]}")
         except Exception as e:
             raise HTTPException(status_code=400, detail=f"Failed to download data for {symbol}: {str(e)}")
 
@@ -58,19 +58,14 @@ async def analyze_stock(request: AnalysisRequest):
 
         # 3. Feature Engineering
         try:
-            # Keep the last row for charting (latest price), but we'll need to drop it for training
-            df_processed_full = graph.engineer_features(df, drop_undefined_target=False)
-            print(f"DEBUG: Processing {symbol}. Full Data Range: {df_processed_full['Date'].iloc[0]} to {df_processed_full['Date'].iloc[-1]}")
+            df_processed = graph.engineer_features(df)
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Feature engineering failed: {str(e)}")
 
         # 4. Prepare Data for Training
         # We need to handle the case where feature engineering drops rows (NaNs)
-        df_processed_full = df_processed_full.dropna(subset=[c for c in df_processed_full.columns if c != 'target'])
-        
-        # For training, we MUST drop the last row where target is unknown
-        df_processed = df_processed_full.iloc[:-1].copy()
-
+        # However, keep original frame for charting before drop if possible, but for consistency we use processed
+        df_processed = df_processed.dropna()
         
         # Define features and target (matching graph.py usually)
         # We'll try to use graph.py's prepare_data_splits logic if possible, or manual to ensure control
@@ -126,12 +121,11 @@ async def analyze_stock(request: AnalysisRequest):
         best_model = max(trained_models, key=get_f1)
         
         # 8. Predict Next Day
-        # Use FULL data to predict for tomorrow (using today's close)
-        prediction_result = graph.predict_next_day(best_model, df_processed_full, available_features)
+        prediction_result = graph.predict_next_day(best_model, df_processed, available_features)
 
         # 9. Prepare Response Data
-        # Historical Data for Charting (Full History including today)
-        chart_data_df = df_processed_full.copy()
+        # Historical Data for Charting (Full History)
+        chart_data_df = df_processed.copy()
         chart_data_df['Date'] = chart_data_df['Date'].astype(str) if 'Date' in chart_data_df.columns else chart_data_df.index.astype(str)
         chart_data = chart_data_df.to_dict(orient='records')
         
@@ -167,9 +161,7 @@ async def analyze_stock(request: AnalysisRequest):
                      valid_probs = None
                 
                 if valid_probs is not None:
-                    # Use standard 0.5 threshold for visualization to show actual separation power
-                    # The optimized threshold often forces "All 1s" for minor F1 gains, which looks broken.
-                    thresh = 0.5 
+                    thresh = float(m['threshold']['threshold'])
                     preds = (valid_probs >= thresh).astype(int)
                     
                     # 1. Class Report
@@ -182,13 +174,11 @@ async def analyze_stock(request: AnalysisRequest):
                     extra_details['confusion_matrix'] = cm.tolist()
 
                     # 3. Pred vs Actual (Last 100 points for visualization)
-                    # Get correct dates from the original dataframe slice
-                    # Y_valid.index corresponds to the indices in df_processed
-                    valid_indices = Y_valid.index
-                    valid_dates = df_processed.loc[valid_indices, 'Date'].astype(str).tolist()
-
+                    # Use dates if available
+                    dates = Y_valid.index[-100:].astype(str).tolist() if hasattr(Y_valid.index, 'astype') else list(range(len(Y_valid)))[-100:]
+                    
                     extra_details['pred_vs_actual'] = {
-                        "dates": valid_dates[-100:],
+                        "dates": dates,
                         "actual": Y_valid.tail(100).tolist(),
                         "predicted": preds[-100:].tolist(),
                         "probability": valid_probs[-100:].tolist()
